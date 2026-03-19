@@ -1,31 +1,27 @@
 name: Check for n8n Updates and Sync to Hugging Face Space
 
 on:
-  # schedule:
-  #   - cron: '0 3 * * *'
   workflow_dispatch:
 
 jobs:
   check-and-update:
     runs-on: ubuntu-latest
     permissions:
-      # This is key: Grant this job permission to push commits to the repository
       contents: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          # Fetch all history to solve the "shallow update not allowed" error
           fetch-depth: 0
 
       - name: Get latest stable n8n version
         id: get_version
         run: |
-          API_URL="https://api.github.com/repos/n8n-io/n8n/releases/latest"
+          API_URL="https://api.github.com/repos/n8n-io/n8n/releases"
           LATEST_TAG=$(curl -fsSL \
             -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer ${{ github.token }}" \
-            "$API_URL" | sed -n 's/.*"tag_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n1)
+            "$API_URL" | sed -n 's/.*"tag_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | grep -v 'stable\|beta\|alpha\|rc' | head -n1)
           LATEST_VERSION=$(echo "$LATEST_TAG" | sed -n 's/^n8n@\([0-9.]\+\)$/\1/p')
 
           if [ -z "$LATEST_VERSION" ]; then
@@ -43,7 +39,7 @@ jobs:
           BLOCKLIST_FILE="version-blocklist.txt"
 
           if [ ! -f "$BLOCKLIST_FILE" ]; then
-            echo "::warning::${BLOCKLIST_FILE} not found. No versions are blocked."
+            echo "::warning::${BLOCKLIST_FILE} not found."
             echo "is_blacklisted=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -59,7 +55,7 @@ jobs:
           done < "$BLOCKLIST_FILE"
 
           if [ "$IS_BLACKLISTED" = "true" ]; then
-            echo "Version $LATEST_VERSION is blacklisted. Skipping auto update."
+            echo "Version $LATEST_VERSION is blacklisted."
             echo "is_blacklisted=true" >> "$GITHUB_OUTPUT"
           else
             echo "Version $LATEST_VERSION is allowed."
@@ -77,9 +73,8 @@ jobs:
         id: update_dockerfile
         if: steps.check_blacklist.outputs.is_blacklisted != 'true' && steps.get_version.outputs.version != steps.get_current_version.outputs.version && steps.get_version.outputs.version != ''
         run: |
-          echo "New version found. Updating Dockerfile..."
+          echo "Updating Dockerfile..."
           sed -i "s/n8nio\/n8n:${{ steps.get_current_version.outputs.version }}/n8nio\/n8n:${{ steps.get_version.outputs.version }}/g" Dockerfile
-          echo "Dockerfile updated."
           echo "updated=true" >> $GITHUB_OUTPUT
 
       - name: Commit and push if Dockerfile was changed
@@ -99,10 +94,6 @@ jobs:
         run: |-
           if [ -z "$HF_REPO" ]; then
             echo "::error::HF_REPO is not set"
-            exit 1
-          fi
-          if ! echo "$HF_REPO" | grep -q "/"; then
-            echo "::error::HF_REPO must be in owner/space format"
             exit 1
           fi
           owner=${HF_REPO%%/*}
