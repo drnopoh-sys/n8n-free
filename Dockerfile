@@ -8,7 +8,6 @@ RUN mkdir -p /home/node/.n8n/nodes && \
     npm install --save \
         n8n-nodes-evolution-api \
         n8n-nodes-puppeteer \
-        n8n-nodes-cheerio-scraper \
         n8n-nodes-instagram-private-api \
         n8n-nodes-tiktok \
         n8n-nodes-youtube && \
