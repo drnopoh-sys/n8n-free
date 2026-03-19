@@ -10,7 +10,14 @@ RUN mkdir -p /home/node/.n8n/nodes && \
         n8n-nodes-puppeteer \
         n8n-nodes-instagram-private-api \
         n8n-nodes-tiktok \
-        n8n-nodes-youtube && \
+        n8n-nodes-youtube \
+        n8n-nodes-waha \
+        n8n-nodes-serpapi \
+        n8n-nodes-firecrawl \
+        n8n-nodes-browserless \
+        n8n-nodes-meta-integration-advanced \
+        n8n-nodes-postfast \
+        n8n-nodes-publer && \
     chown -R node:node /home/node/.n8n
 
 USER node
